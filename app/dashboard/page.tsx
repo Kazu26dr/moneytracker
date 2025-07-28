@@ -31,23 +31,25 @@ export default function DashboardPage() {
         if (!user) return;
 
         // Get recent transactions
-        const { data: transactionData } = await getTransactions(user.id, 10);
+        const transactionsResult = await getTransactions(user.id, 10);
+        const transactionData = transactionsResult?.data;
         if (transactionData) {
           setTransactions(transactionData);
         }
 
         // Get current month stats
         const now = new Date();
-        const { data: monthlyData } = await getMonthlyStats(user.id, now.getFullYear(), now.getMonth() + 1);
+        const monthlyStatsResult = await getMonthlyStats(user.id, now.getFullYear(), now.getMonth() + 1);
+        const monthlyData = monthlyStatsResult?.data;
 
         if (monthlyData) {
           const income = monthlyData
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+            .filter((t: { type: string; amount: number }) => t.type === 'income')
+            .reduce((sum: number, t: { amount: number }) => sum + Math.abs(t.amount), 0);
 
           const expenses = monthlyData
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+            .filter((t: { type: string; amount: number }) => t.type === 'expense')
+            .reduce((sum: number, t: { amount: number }) => sum + Math.abs(t.amount), 0);
 
           setStats({
             totalIncome: income,

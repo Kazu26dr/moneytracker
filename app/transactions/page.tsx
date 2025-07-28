@@ -20,9 +20,9 @@ export default function TransactionsPage() {
 
         setUserId(user.id);
 
-        const { data: categoryData } = await getCategories(user.id);
-        if (categoryData) {
-          setCategories(categoryData);
+        const categoryData = await getCategories(user.id);
+        if (categoryData && categoryData.data) {
+          setCategories(categoryData.data);
         }
       } catch (error) {
         console.error('Error loading data:', error);

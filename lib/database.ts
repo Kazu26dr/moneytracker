@@ -1,11 +1,13 @@
-import { supabase } from './supabase';
-import { Transaction, Category, Budget } from '@/types';
+import { supabase } from "./supabase";
+import { Transaction, Category, Budget } from "@/types";
 
 // Transaction operations
 export const getTransactions = async (userId: string, limit?: number) => {
+  if (!supabase) return;
   const query = supabase
-    .from('transactions')
-    .select(`
+    .from("transactions")
+    .select(
+      `
       *,
       categories (
         id,
@@ -13,9 +15,10 @@ export const getTransactions = async (userId: string, limit?: number) => {
         color,
         icon
       )
-    `)
-    .eq('user_id', userId)
-    .order('date', { ascending: false });
+    `
+    )
+    .eq("user_id", userId)
+    .order("date", { ascending: false });
 
   if (limit) {
     query.limit(limit);
@@ -25,52 +28,64 @@ export const getTransactions = async (userId: string, limit?: number) => {
   return { data, error };
 };
 
-export const createTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'updated_at'>) => {
+export const createTransaction = async (
+  transaction: Omit<Transaction, "id" | "created_at" | "updated_at">
+) => {
+  if (!supabase) return;
   const { data, error } = await supabase
-    .from('transactions')
+    .from("transactions")
     .insert([transaction])
     .select()
     .single();
   return { data, error };
 };
 
-export const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+export const updateTransaction = async (
+  id: string,
+  updates: Partial<Transaction>
+) => {
+  if (!supabase) return;
   const { data, error } = await supabase
-    .from('transactions')
+    .from("transactions")
     .update(updates)
-    .eq('id', id)
+    .eq("id", id)
     .select()
     .single();
   return { data, error };
 };
 
 export const deleteTransaction = async (id: string) => {
-  const { error } = await supabase
-    .from('transactions')
-    .delete()
-    .eq('id', id);
+  if (!supabase) return;
+  const { error } = await supabase.from("transactions").delete().eq("id", id);
   return { error };
 };
 
 // Category operations
-export const getCategories = async (userId: string, type?: 'income' | 'expense') => {
+export const getCategories = async (
+  userId: string,
+  type?: "income" | "expense"
+) => {
+  if (!supabase) return;
   let query = supabase
-    .from('categories')
-    .select('*')
-    .eq('user_id', userId)
-    .order('name');
+    .from("categories")
+    .select("*")
+    .eq("user_id", userId)
+    .order("name");
 
   if (type) {
-    query = query.eq('type', type);
+    query = query.eq("type", type);
   }
 
   const { data, error } = await query;
   return { data, error };
 };
 
-export const createCategory = async (category: Omit<Category, 'id' | 'created_at'>) => {
+export const createCategory = async (
+  category: Omit<Category, "id" | "created_at">
+) => {
+  if (!supabase) return;
   const { data, error } = await supabase
-    .from('categories')
+    .from("categories")
     .insert([category])
     .select()
     .single();
@@ -79,9 +94,11 @@ export const createCategory = async (category: Omit<Category, 'id' | 'created_at
 
 // Budget operations
 export const getBudgets = async (userId: string) => {
+  if (!supabase) return;
   const { data, error } = await supabase
-    .from('budgets')
-    .select(`
+    .from("budgets")
+    .select(
+      `
       *,
       categories (
         id,
@@ -89,15 +106,19 @@ export const getBudgets = async (userId: string) => {
         color,
         icon
       )
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    `
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
   return { data, error };
 };
 
-export const createBudget = async (budget: Omit<Budget, 'id' | 'created_at'>) => {
+export const createBudget = async (
+  budget: Omit<Budget, "id" | "created_at">
+) => {
+  if (!supabase) return;
   const { data, error } = await supabase
-    .from('budgets')
+    .from("budgets")
     .insert([budget])
     .select()
     .single();
@@ -105,13 +126,19 @@ export const createBudget = async (budget: Omit<Budget, 'id' | 'created_at'>) =>
 };
 
 // Analytics
-export const getMonthlyStats = async (userId: string, year: number, month: number) => {
+export const getMonthlyStats = async (
+  userId: string,
+  year: number,
+  month: number
+) => {
+  if (!supabase) return;
   const startDate = new Date(year, month - 1, 1).toISOString();
   const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
 
   const { data, error } = await supabase
-    .from('transactions')
-    .select(`
+    .from("transactions")
+    .select(
+      `
       *,
       categories (
         id,
@@ -119,10 +146,11 @@ export const getMonthlyStats = async (userId: string, year: number, month: numbe
         color,
         icon
       )
-    `)
-    .eq('user_id', userId)
-    .gte('date', startDate)
-    .lte('date', endDate);
+    `
+    )
+    .eq("user_id", userId)
+    .gte("date", startDate)
+    .lte("date", endDate);
 
   return { data, error };
 };

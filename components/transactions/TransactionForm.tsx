@@ -68,8 +68,9 @@ export function TransactionForm({ categories, userId, onSuccess }: TransactionFo
         amount: transactionType === 'expense' ? -Math.abs(data.amount) : Math.abs(data.amount)
       };
 
-      const { error } = await createTransaction(transactionData);
-      
+      const result = await createTransaction(transactionData);
+      const error = result?.error;
+
       if (error) {
         console.error('Transaction creation error:', error);
         return;
