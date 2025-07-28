@@ -45,19 +45,19 @@ export default function CategoriesPage() {
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
-    
+
     // In a real app, this would call the API
     console.log('Adding category:', {
       name: newCategoryName,
       type: selectedType,
       color: selectedColor
     });
-    
+
     setNewCategoryName('');
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-2.5">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">カテゴリ管理</h1>
         <p className="text-gray-600 mt-2">収入と支出のカテゴリを管理します</p>
@@ -111,9 +111,8 @@ export default function CategoriesPage() {
                 {DEFAULT_COLORS.map((color) => (
                   <button
                     key={color}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      selectedColor === color ? 'border-gray-400' : 'border-gray-200'
-                    }`}
+                    className={`w-8 h-8 rounded-full border-2 ${selectedColor === color ? 'border-gray-400' : 'border-gray-200'
+                      }`}
                     style={{ backgroundColor: color }}
                     onClick={() => setSelectedColor(color)}
                   />

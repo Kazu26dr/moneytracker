@@ -17,7 +17,7 @@ export default function TransactionsPage() {
       try {
         const { user } = await getCurrentUser();
         if (!user) return;
-        
+
         setUserId(user.id);
 
         const { data: categoryData } = await getCategories(user.id);
@@ -43,13 +43,13 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-2.5 flex flex-col justify-center items-center">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">取引を追加</h1>
         <p className="text-gray-600 mt-2">新しい収入や支出を記録します</p>
       </div>
 
-      <div className="max-w-2xl">
+      <div className="w-full max-w-5xl">
         <TransactionForm
           categories={categories}
           userId={userId}

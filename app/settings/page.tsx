@@ -10,7 +10,7 @@ import { User, Bell, Shield, Download, Trash2 } from 'lucide-react';
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-2.5">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">設定</h1>
         <p className="text-gray-600 mt-2">アカウントとアプリケーションの設定を管理します</p>
@@ -127,9 +127,9 @@ export default function SettingsPage() {
                 データをエクスポート
               </Button>
             </div>
-            
+
             <Separator />
-            
+
             <div className="space-y-2">
               <h4 className="font-medium text-red-600">危険な操作</h4>
               <p className="text-sm text-gray-500">

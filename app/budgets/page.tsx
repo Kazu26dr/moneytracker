@@ -64,7 +64,7 @@ export default function BudgetsPage() {
   const totalSpent = mockBudgets.reduce((sum, budget) => sum + budget.spentAmount, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-2.5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">予算管理</h1>
@@ -99,17 +99,16 @@ export default function BudgetsPage() {
               <div className="text-sm text-gray-500">使用済み</div>
             </div>
             <div className="text-center">
-              <div className={`text-2xl font-bold ${
-                totalBudget - totalSpent >= 0 ? 'text-emerald-600' : 'text-red-600'
-              }`}>
+              <div className={`text-2xl font-bold ${totalBudget - totalSpent >= 0 ? 'text-emerald-600' : 'text-red-600'
+                }`}>
                 {formatCurrency(totalBudget - totalSpent)}
               </div>
               <div className="text-sm text-gray-500">残り予算</div>
             </div>
           </div>
           <div className="mt-4">
-            <Progress 
-              value={getProgressPercentage(totalSpent, totalBudget)} 
+            <Progress
+              value={getProgressPercentage(totalSpent, totalBudget)}
               className="h-3"
             />
             <div className="flex justify-between text-sm text-gray-500 mt-1">
@@ -125,7 +124,7 @@ export default function BudgetsPage() {
         {mockBudgets.map((budget) => {
           const progressPercentage = getProgressPercentage(budget.spentAmount, budget.budgetAmount);
           const status = getBudgetStatus(budget.spentAmount, budget.budgetAmount);
-          
+
           return (
             <Card key={budget.id}>
               <CardHeader>
@@ -159,17 +158,17 @@ export default function BudgetsPage() {
                     {formatCurrency(budget.spentAmount)} / {formatCurrency(budget.budgetAmount)}
                   </span>
                 </div>
-                
-                <Progress 
-                  value={progressPercentage} 
+
+                <Progress
+                  value={progressPercentage}
                   className="h-2"
                 />
-                
+
                 <div className="flex justify-between text-sm text-gray-500">
                   <span>{progressPercentage.toFixed(1)}% 使用</span>
                   <span className={
-                    budget.budgetAmount - budget.spentAmount >= 0 
-                      ? 'text-emerald-600' 
+                    budget.budgetAmount - budget.spentAmount >= 0
+                      ? 'text-emerald-600'
                       : 'text-red-600'
                   }>
                     残り {formatCurrency(budget.budgetAmount - budget.spentAmount)}

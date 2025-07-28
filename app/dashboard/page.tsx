@@ -39,12 +39,12 @@ export default function DashboardPage() {
         // Get current month stats
         const now = new Date();
         const { data: monthlyData } = await getMonthlyStats(user.id, now.getFullYear(), now.getMonth() + 1);
-        
+
         if (monthlyData) {
           const income = monthlyData
             .filter(t => t.type === 'income')
             .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-          
+
           const expenses = monthlyData
             .filter(t => t.type === 'expense')
             .reduce((sum, t) => sum + Math.abs(t.amount), 0);
@@ -86,7 +86,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-2.5">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
         <p className="text-gray-600 mt-2">あなたの家計の概要を確認できます</p>

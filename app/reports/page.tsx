@@ -37,7 +37,7 @@ export default function ReportsPage() {
   const totalExpenses = mockData.categoryBreakdown.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-2.5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">レポート</h1>
@@ -154,7 +154,7 @@ export default function ReportsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              
+
               <div className="space-y-2">
                 {mockData.categoryBreakdown.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
