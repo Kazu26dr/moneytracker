@@ -25,6 +25,7 @@ const navigation = [
   { name: 'レポート', href: '/reports', icon: TrendingUp },
   { name: 'カテゴリ', href: '/categories', icon: PieChart },
   { name: '予算', href: '/budgets', icon: Target },
+  { name: '資産', href: '/assets', icon: DollarSign },
   { name: '設定', href: '/settings', icon: Settings },
 ];
 

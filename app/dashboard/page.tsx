@@ -5,9 +5,10 @@ import { StatsCards } from '@/components/dashboard/StatsCards';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { getTransactions, getMonthlyStats } from '@/lib/database';
+import { getTransactions, getMonthlyStats, getAssets } from '@/lib/database';
 import { getCurrentUser } from '@/lib/supabase';
 import { Transaction } from '@/types';
+import { Asset } from '@/types';
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -23,6 +24,8 @@ export default function DashboardPage() {
     expenses: number;
   }>>([]);
   const [loading, setLoading] = useState(true);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [assetsTotal, setAssetsTotal] = useState(0);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -69,6 +72,13 @@ export default function DashboardPage() {
           { month: '6月', income: 380000, expenses: 320000 },
         ]);
 
+        // 資産データ取得
+        const assetsResult = await getAssets(user.id);
+        if (assetsResult?.data) {
+          setAssets(assetsResult.data);
+          setAssetsTotal(assetsResult.data.reduce((sum: number, a: Asset) => sum + (a.balance || 0), 0));
+        }
+
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -94,12 +104,26 @@ export default function DashboardPage() {
         <p className="text-gray-600 mt-2">あなたの家計の概要を確認できます</p>
       </div>
 
-      <StatsCards
-        totalIncome={stats.totalIncome}
-        totalExpenses={stats.totalExpenses}
-        netIncome={stats.netIncome}
-        monthlyChange={stats.monthlyChange}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-bold mb-2">資産合計</h2>
+          <div className="text-3xl font-bold text-emerald-600 mb-2">{assetsTotal.toLocaleString()} 円</div>
+          <ul className="divide-y divide-gray-200">
+            {assets.map((asset) => (
+              <li key={asset.id} className="py-2 flex justify-between items-center">
+                <span className="font-medium">{asset.name} <span className="text-xs text-gray-500 ml-2">({asset.type})</span></span>
+                <span className="text-right">{asset.balance.toLocaleString()} 円</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <StatsCards
+          totalIncome={stats.totalIncome}
+          totalExpenses={stats.totalExpenses}
+          netIncome={stats.netIncome}
+          monthlyChange={stats.monthlyChange}
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <ExpenseChart data={chartData} />

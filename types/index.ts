@@ -2,7 +2,7 @@ export interface Transaction {
   id: string;
   user_id: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   category_id: string;
   description: string;
   date: string;
@@ -13,7 +13,7 @@ export interface Transaction {
 export interface Category {
   id: string;
   name: string;
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   color: string;
   icon: string;
   user_id: string;
@@ -25,7 +25,7 @@ export interface Budget {
   user_id: string;
   category_id: string;
   amount: number;
-  period: 'monthly' | 'weekly' | 'yearly';
+  period: "monthly" | "weekly" | "yearly";
   start_date: string;
   end_date: string;
   created_at: string;
@@ -68,4 +68,15 @@ export interface DashboardStats {
     amount: number;
     color: string;
   }>;
+}
+
+export interface Asset {
+  id: string;
+  user_id: string;
+  name: string; // 例: 三井住友銀行、現金、楽天証券
+  type: string; // 例: 銀行, 現金, 証券, その他
+  balance: number; // 現在の残高
+  note?: string; // メモ
+  created_at: string;
+  updated_at: string;
 }

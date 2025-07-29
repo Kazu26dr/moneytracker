@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PlusCircle } from 'lucide-react';
+import { Sidebar } from '@/components/layout/Sidebar';
 
 const DEFAULT_COLORS = [
   '#EF4444', '#F97316', '#F59E0B', '#EAB308',
@@ -57,123 +58,130 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="space-y-8 p-2.5">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">カテゴリ管理</h1>
-        <p className="text-gray-600 mt-2">収入と支出のカテゴリを管理します</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Add new category */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PlusCircle className="h-5 w-5" />
-              新しいカテゴリを追加
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <Label>カテゴリタイプ</Label>
-              <RadioGroup
-                value={selectedType}
-                onValueChange={(value) => setSelectedType(value as 'income' | 'expense')}
-                className="flex gap-6"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="expense" id="expense-type" />
-                  <Label htmlFor="expense-type" className="text-red-600 font-medium">
-                    支出
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="income" id="income-type" />
-                  <Label htmlFor="income-type" className="text-emerald-600 font-medium">
-                    収入
-                  </Label>
-                </div>
-              </RadioGroup>
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="lg:ml-64">
+        <main className="py-8 px-4 lg:px-8">
+          <div className="space-y-8 p-2.5">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">カテゴリ管理</h1>
+              <p className="text-gray-600 mt-2">収入と支出のカテゴリを管理します</p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="category-name">カテゴリ名</Label>
-              <Input
-                id="category-name"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="例: 食費"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>カラー</Label>
-              <div className="grid grid-cols-8 gap-2">
-                {DEFAULT_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    className={`w-8 h-8 rounded-full border-2 ${selectedColor === color ? 'border-gray-400' : 'border-gray-200'
-                      }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setSelectedColor(color)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <Button
-              onClick={handleAddCategory}
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
-              disabled={!newCategoryName.trim()}
-            >
-              カテゴリを追加
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Existing categories */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {selectedType === 'income' ? '収入' : '支出'}カテゴリ一覧
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {currentCategories.map((category, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span className="font-medium">{category.name}</span>
-                    <span className="text-lg">{category.icon}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Add new category */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PlusCircle className="h-5 w-5" />
+                    新しいカテゴリを追加
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <Label>カテゴリタイプ</Label>
+                    <RadioGroup
+                      value={selectedType}
+                      onValueChange={(value) => setSelectedType(value as 'income' | 'expense')}
+                      className="flex gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="expense" id="expense-type" />
+                        <Label htmlFor="expense-type" className="text-red-600 font-medium">
+                          支出
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="income" id="income-type" />
+                        <Label htmlFor="income-type" className="text-emerald-600 font-medium">
+                          収入
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
-                  <Badge
-                    variant={selectedType === 'income' ? 'default' : 'secondary'}
-                    className={
-                      selectedType === 'income'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-red-100 text-red-700'
-                    }
-                  >
-                    {selectedType === 'income' ? '収入' : '支出'}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-yellow-800">
-          <strong>注意:</strong> この画面はデモ版です。実際のアプリケーションでは、
-          Supabaseデータベースと連携してカテゴリの作成・編集・削除が可能になります。
-        </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="category-name">カテゴリ名</Label>
+                    <Input
+                      id="category-name"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="例: 食費"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>カラー</Label>
+                    <div className="grid grid-cols-8 gap-2">
+                      {DEFAULT_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          className={`w-8 h-8 rounded-full border-2 ${selectedColor === color ? 'border-gray-400' : 'border-gray-200'
+                            }`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => setSelectedColor(color)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleAddCategory}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    disabled={!newCategoryName.trim()}
+                  >
+                    カテゴリを追加
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Existing categories */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {selectedType === 'income' ? '収入' : '支出'}カテゴリ一覧
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {currentCategories.map((category, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="font-medium">{category.name}</span>
+                          <span className="text-lg">{category.icon}</span>
+                        </div>
+                        <Badge
+                          variant={selectedType === 'income' ? 'default' : 'secondary'}
+                          className={
+                            selectedType === 'income'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-red-100 text-red-700'
+                          }
+                        >
+                          {selectedType === 'income' ? '収入' : '支出'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-yellow-800">
+                <strong>注意:</strong> この画面はデモ版です。実際のアプリケーションでは、
+                Supabaseデータベースと連携してカテゴリの作成・編集・削除が可能になります。
+              </p>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );

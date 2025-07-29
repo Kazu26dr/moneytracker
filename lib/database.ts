@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { Transaction, Category, Budget } from "@/types";
+import { Transaction, Category, Budget, Asset } from "@/types";
 
 // Transaction operations
 export const getTransactions = async (userId: string, limit?: number) => {
@@ -153,4 +153,44 @@ export const getMonthlyStats = async (
     .lte("date", endDate);
 
   return { data, error };
+};
+
+// Asset operations
+export const getAssets = async (userId: string) => {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from("assets")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  return { data, error };
+};
+
+export const createAsset = async (
+  asset: Omit<Asset, "id" | "created_at" | "updated_at">
+) => {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from("assets")
+    .insert([asset])
+    .select()
+    .single();
+  return { data, error };
+};
+
+export const updateAsset = async (id: string, updates: Partial<Asset>) => {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from("assets")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+  return { data, error };
+};
+
+export const deleteAsset = async (id: string) => {
+  if (!supabase) return;
+  const { error } = await supabase.from("assets").delete().eq("id", id);
+  return { error };
 };
