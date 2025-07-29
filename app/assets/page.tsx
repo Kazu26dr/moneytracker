@@ -30,8 +30,8 @@ export default function AssetsPage() {
             const { user } = await getCurrentUser();
             if (!user) return;
             setUserId(user.id);
-            const { data } = await getAssets(user.id);
-            setAssets(data || []);
+            const result = await getAssets(user.id);
+            setAssets(result?.data || []);
             setLoading(false);
         };
         fetchData();
@@ -56,8 +56,8 @@ export default function AssetsPage() {
         } else {
             await createAsset(assetData);
         }
-        const { data } = await getAssets(userId);
-        setAssets(data || []);
+        const result = await getAssets(userId);
+        setAssets(result?.data || []);
         setForm({ name: "", type: ASSET_TYPES[0], balance: "", note: "" });
         setEditId(null);
     };
@@ -74,8 +74,8 @@ export default function AssetsPage() {
 
     const handleDelete = async (id: string) => {
         await deleteAsset(id);
-        const { data } = await getAssets(userId);
-        setAssets(data || []);
+        const result = await getAssets(userId);
+        setAssets(result?.data || []);
     };
 
     return (
