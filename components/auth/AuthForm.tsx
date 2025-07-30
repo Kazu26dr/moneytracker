@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, DollarSign } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn, signUp } from '@/lib/supabase';
+import { createProfileIfNotExists } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +29,15 @@ export function AuthForm() {
 
     if (error) {
       setError(error.message);
+    } else {
+      const fullName = localStorage.getItem('signup_fullName');
+      if (fullName) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user?.id) {
+          await createProfileIfNotExists(userData.user.id, fullName);
+          localStorage.removeItem('signup_fullName');
+        }
+      }
     }
 
     setIsLoading(false);
@@ -47,6 +58,7 @@ export function AuthForm() {
     if (error) {
       setError(error.message);
     } else {
+      localStorage.setItem('signup_fullName', fullName);
       setError('確認メールをお送りしました。メールをご確認ください。');
     }
 

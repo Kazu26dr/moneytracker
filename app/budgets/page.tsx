@@ -61,6 +61,11 @@ export default function BudgetsPage() {
     return { status: 'good', color: 'text-emerald-600', bgColor: 'bg-emerald-50' };
   };
 
+  // 進捗バーの色を返す関数を追加
+  const getProgressBarColor = (spent: number, budget: number) => {
+    return spent > budget ? 'bg-red-500' : 'bg-blue-500';
+  };
+
   const totalBudget = mockBudgets.reduce((sum, budget) => sum + budget.budgetAmount, 0);
   const totalSpent = mockBudgets.reduce((sum, budget) => sum + budget.spentAmount, 0);
 
@@ -115,6 +120,7 @@ export default function BudgetsPage() {
                   <Progress
                     value={getProgressPercentage(totalSpent, totalBudget)}
                     className="h-3"
+                    barClassName={getProgressBarColor(totalSpent, totalBudget)}
                   />
                   <div className="flex justify-between text-sm text-gray-500 mt-1">
                     <span>{getProgressPercentage(totalSpent, totalBudget).toFixed(1)}% 使用</span>
@@ -167,6 +173,7 @@ export default function BudgetsPage() {
                       <Progress
                         value={progressPercentage}
                         className="h-2"
+                        barClassName={getProgressBarColor(budget.spentAmount, budget.budgetAmount)}
                       />
 
                       <div className="flex justify-between text-sm text-gray-500">

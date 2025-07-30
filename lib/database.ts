@@ -194,3 +194,23 @@ export const deleteAsset = async (id: string) => {
   const { error } = await supabase.from("assets").delete().eq("id", id);
   return { error };
 };
+
+// プロフィールがなければ作成する関数
+export const createProfileIfNotExists = async (
+  userId: string,
+  fullName: string
+) => {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .single();
+  if (!data) {
+    // プロフィールがなければINSERT
+    const { error: insertError } = await supabase
+      .from("profiles")
+      .insert([{ id: userId, full_name: fullName }]);
+    if (insertError) return { error: insertError };
+  }
+  return { error: null };
+};

@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   value?: number;
   max?: number;
+  barClassName?: string;
 }
 
 const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
-  ({ className, value = 0, max = 100, ...props }, ref) => {
+  ({ className, value = 0, max = 100, barClassName, ...props }, ref) => {
     // 値の正規化（0-100%の範囲に収める）
     const normalizedValue = Math.min(Math.max((value / max) * 100, 0), 100);
 
@@ -21,13 +22,13 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
         aria-valuemax={max}
         aria-valuenow={value}
         className={cn(
-          'relative h-4 w-full overflow-hidden rounded-full bg-secondary',
+          'relative h-4 w-full overflow-hidden rounded-full bg-gray-200',
           className
         )}
         {...props}
       >
         <div
-          className="h-full w-full flex-1 bg-primary transition-all duration-300 ease-out"
+          className={cn("h-full flex-1 transition-all duration-300 ease-out", barClassName)}
           style={{
             width: `${normalizedValue}%`,
             transformOrigin: 'left center'
