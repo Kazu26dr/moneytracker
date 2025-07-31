@@ -7,33 +7,46 @@ import { getCategories } from '@/lib/database';
 import { getCurrentUser } from '@/lib/supabase';
 import { Category } from '@/types';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { useCache } from '@/hooks/use-cache';
 
 export default function TransactionsPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
   const [userId, setUserId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
 
+  // ユーザー情報の取得
   useEffect(() => {
-    const loadData = async () => {
+    const loadUser = async () => {
       try {
         const { user } = await getCurrentUser();
-        if (!user) return;
-
-        setUserId(user.id);
-
-        const categoryData = await getCategories(user.id);
-        if (categoryData && categoryData.data) {
-          setCategories(categoryData.data);
+        if (user) {
+          setUserId(user.id);
         }
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Error loading user:', error);
       } finally {
-        setLoading(false);
+        setUserLoading(false);
       }
     };
 
-    loadData();
+    loadUser();
   }, []);
+
+  // カテゴリの取得（キャッシュ付き）
+  const {
+    data: categoryData,
+    loading: categoryLoading,
+    error: categoryError
+  } = useCache(
+    `categories_${userId}`,
+    async () => {
+      if (!userId) return { data: [], error: null };
+      return await getCategories(userId);
+    },
+    10 * 60 * 1000 // 10分間キャッシュ
+  );
+
+  const categories = categoryData?.data || [];
+  const loading = userLoading || categoryLoading;
 
   if (loading) {
     return (
@@ -65,11 +78,11 @@ export default function TransactionsPage() {
               />
             </div>
 
-            {categories.length === 0 && (
+            {categories.length === 0 && !categoryLoading && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-blue-800">
                   カテゴリが見つかりません。まず
-                  <a href="/categories" className="font-medium underline">
+                  <a href="/categories" className="font-medium underline hover:text-blue-600">
                     カテゴリページ
                   </a>
                   でカテゴリを作成してください。

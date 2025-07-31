@@ -1,32 +1,74 @@
 import { supabase } from "./supabase";
 import { Transaction, Category, Budget, Asset } from "@/types";
+import { monitorDatabaseQuery, checkPerformanceWarning } from "./performance";
 
 // Transaction operations
-export const getTransactions = async (userId: string, limit?: number) => {
-  if (!supabase) return;
-  const query = supabase
-    .from("transactions")
-    .select(
-      `
-      *,
-      categories (
-        id,
-        name,
-        color,
-        icon
+export const getTransactions = monitorDatabaseQuery(
+  "getTransactions",
+  async (
+    userId: string,
+    limit?: number,
+    offset?: number,
+    options?: {
+      includeCategories?: boolean;
+      cache?: boolean;
+    }
+  ) => {
+    if (!supabase) return;
+
+    const { includeCategories = true, cache = true } = options || {};
+
+    let query = supabase
+      .from("transactions")
+      .select(
+        includeCategories
+          ? `
+            id,
+            amount,
+            description,
+            date,
+            type,
+            user_id,
+            category_id,
+            created_at,
+            updated_at,
+            categories (
+              id,
+              name,
+              color,
+              icon
+            )
+          `
+          : `
+            id,
+            amount,
+            description,
+            date,
+            type,
+            user_id,
+            category_id,
+            created_at,
+            updated_at
+          `
       )
-    `
-    )
-    .eq("user_id", userId)
-    .order("date", { ascending: false });
+      .eq("user_id", userId)
+      .order("date", { ascending: false });
 
-  if (limit) {
-    query.limit(limit);
+    // ページネーション
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    if (offset) {
+      query = query.range(offset, offset + (limit || 50) - 1);
+    }
+
+    // キャッシュはSupabaseのクエリビルダーでは直接サポートされていないため削除
+
+    const { data, error } = await query;
+    return { data, error };
   }
-
-  const { data, error } = await query;
-  return { data, error };
-};
+);
 
 export const createTransaction = async (
   transaction: Omit<Transaction, "id" | "created_at" | "updated_at">
@@ -68,7 +110,7 @@ export const getCategories = async (
   if (!supabase) return;
   let query = supabase
     .from("categories")
-    .select("*")
+    .select("id, name, color, icon, type, user_id, created_at")
     .eq("user_id", userId)
     .order("name");
 
@@ -80,17 +122,18 @@ export const getCategories = async (
   return { data, error };
 };
 
-export const createCategory = async (
-  category: Omit<Category, "id" | "created_at">
-) => {
-  if (!supabase) return;
-  const { data, error } = await supabase
-    .from("categories")
-    .insert([category])
-    .select()
-    .single();
-  return { data, error };
-};
+export const createCategory = monitorDatabaseQuery(
+  "createCategory",
+  async (category: Omit<Category, "id" | "created_at">) => {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("categories")
+      .insert([category])
+      .select()
+      .single();
+    return { data, error };
+  }
+);
 
 // Budget operations
 export const getBudgets = async (userId: string) => {

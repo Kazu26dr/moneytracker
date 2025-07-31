@@ -1,14 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { createCategory, getCategories } from '@/lib/database';
+import { getCurrentUser } from '@/lib/supabase';
+import { Category } from '@/types';
+import { useCache } from '@/hooks/use-cache';
+import { toast } from '@/hooks/use-toast';
 
 const DEFAULT_COLORS = [
   '#EF4444', '#F97316', '#F59E0B', '#EAB308',
@@ -41,20 +46,82 @@ export default function CategoriesPage() {
   const [selectedType, setSelectedType] = useState<'income' | 'expense'>('expense');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
+  const [userId, setUserId] = useState<string>('');
+  const [isAdding, setIsAdding] = useState(false);
 
-  const currentCategories = DEFAULT_CATEGORIES[selectedType];
+  // ユーザー情報の取得
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const { user } = await getCurrentUser();
+        if (user) {
+          setUserId(user.id);
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    };
 
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim()) return;
+    loadUser();
+  }, []);
 
-    // In a real app, this would call the API
-    console.log('Adding category:', {
-      name: newCategoryName,
-      type: selectedType,
-      color: selectedColor
-    });
+  // カテゴリの取得（キャッシュ付き）
+  const {
+    data: categoryData,
+    loading: categoryLoading,
+    refetch: refetchCategories
+  } = useCache(
+    `categories_${userId}`,
+    async () => {
+      if (!userId) return { data: [], error: null };
+      return await getCategories(userId);
+    },
+    10 * 60 * 1000 // 10分間キャッシュ
+  );
 
-    setNewCategoryName('');
+  const userCategories = categoryData?.data || [];
+  const currentCategories = userCategories.filter(cat => cat.type === selectedType);
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim() || !userId) return;
+
+    setIsAdding(true);
+    try {
+      const newCategory = {
+        name: newCategoryName.trim(),
+        type: selectedType,
+        color: selectedColor,
+        icon: '📦', // デフォルトアイコン
+        user_id: userId
+      };
+
+      const result = await createCategory(newCategory);
+
+      if (result?.error) {
+        toast({
+          title: "エラー",
+          description: "カテゴリの追加に失敗しました: " + result.error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "成功",
+          description: "カテゴリを追加しました",
+        });
+        setNewCategoryName('');
+        // キャッシュを更新
+        refetchCategories();
+      }
+    } catch (error) {
+      console.error('Error adding category:', error);
+      toast({
+        title: "エラー",
+        description: "カテゴリの追加に失敗しました",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   return (
@@ -128,9 +195,9 @@ export default function CategoriesPage() {
                   <Button
                     onClick={handleAddCategory}
                     className="w-full bg-emerald-600 hover:bg-emerald-700"
-                    disabled={!newCategoryName.trim()}
+                    disabled={!newCategoryName.trim() || isAdding}
                   >
-                    カテゴリを追加
+                    {isAdding ? '追加中...' : 'カテゴリを追加'}
                   </Button>
                 </CardContent>
               </Card>
@@ -140,46 +207,48 @@ export default function CategoriesPage() {
                 <CardHeader>
                   <CardTitle>
                     {selectedType === 'income' ? '収入' : '支出'}カテゴリ一覧
+                    {categoryLoading && <span className="text-sm text-gray-500 ml-2">(読み込み中...)</span>}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {currentCategories.map((category, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span className="font-medium">{category.name}</span>
-                          <span className="text-lg">{category.icon}</span>
-                        </div>
-                        <Badge
-                          variant={selectedType === 'income' ? 'default' : 'secondary'}
-                          className={
-                            selectedType === 'income'
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-red-100 text-red-700'
-                          }
-                        >
-                          {selectedType === 'income' ? '収入' : '支出'}
-                        </Badge>
+                    {currentCategories.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        {categoryLoading ? 'カテゴリを読み込み中...' : 'カテゴリがありません'}
                       </div>
-                    ))}
+                    ) : (
+                      currentCategories.map((category) => (
+                        <div
+                          key={category.id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-4 h-4 rounded-full"
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span className="font-medium">{category.name}</span>
+                            <span className="text-lg">{category.icon}</span>
+                          </div>
+                          <Badge
+                            variant={selectedType === 'income' ? 'default' : 'secondary'}
+                            className={
+                              selectedType === 'income'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-red-100 text-red-700'
+                            }
+                          >
+                            {selectedType === 'income' ? '収入' : '支出'}
+                          </Badge>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-yellow-800">
-                <strong>注意:</strong> この画面はデモ版です。実際のアプリケーションでは、
-                Supabaseデータベースと連携してカテゴリの作成・編集・削除が可能になります。
-              </p>
-            </div>
+
           </div>
         </main>
       </div>
