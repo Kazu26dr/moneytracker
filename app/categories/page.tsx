@@ -42,12 +42,21 @@ const DEFAULT_CATEGORIES = {
   ]
 };
 
+const AVAILABLE_ICONS = [
+  '🍽️', '🚗', '🏠', '💡', '🏥', '🎮', '👔', '📦',
+  '💼', '💰', '💻', '📈', '🛒', '🎬', '📚', '✈️',
+  '🏋️', '🎵', '📱', '🍕', '☕', '🎨', '🌟', '💳',
+  '🎯', '🔧', '🎪', '🌸', '🎁', '🏆', '🔥', '⚡'
+];
+
 export default function CategoriesPage() {
   const [selectedType, setSelectedType] = useState<'income' | 'expense'>('expense');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
+  const [selectedIcon, setSelectedIcon] = useState('📦');
   const [userId, setUserId] = useState<string>('');
   const [isAdding, setIsAdding] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   // ユーザー情報の取得
   useEffect(() => {
@@ -65,22 +74,30 @@ export default function CategoriesPage() {
     loadUser();
   }, []);
 
-  // カテゴリの取得（キャッシュ付き）
-  const {
-    data: categoryData,
-    loading: categoryLoading,
-    refetch: refetchCategories
-  } = useCache(
-    `categories_${userId}`,
-    async () => {
-      if (!userId) return { data: [], error: null };
-      return await getCategories(userId);
-    },
-    10 * 60 * 1000 // 10分間キャッシュ
-  );
+  // カテゴリの取得
+  const [categoryLoading, setCategoryLoading] = useState(false);
 
-  const userCategories = categoryData?.data || [];
-  const currentCategories = userCategories.filter(cat => cat.type === selectedType);
+  const loadCategories = useCallback(async () => {
+    if (!userId) return;
+    
+    setCategoryLoading(true);
+    try {
+      const result = await getCategories(userId);
+      if (result?.data) {
+        setCategories(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    } finally {
+      setCategoryLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  const currentCategories = categories.filter(cat => cat.type === selectedType);
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim() || !userId) return;
@@ -91,7 +108,7 @@ export default function CategoriesPage() {
         name: newCategoryName.trim(),
         type: selectedType,
         color: selectedColor,
-        icon: '📦', // デフォルトアイコン
+        icon: selectedIcon,
         user_id: userId
       };
 
@@ -109,8 +126,9 @@ export default function CategoriesPage() {
           description: "カテゴリを追加しました",
         });
         setNewCategoryName('');
-        // キャッシュを更新
-        refetchCategories();
+        setSelectedIcon('📦');
+        // カテゴリ一覧を再読み込み
+        await loadCategories();
       }
     } catch (error) {
       console.error('Error adding category:', error);
@@ -189,6 +207,27 @@ export default function CategoriesPage() {
                           onClick={() => setSelectedColor(color)}
                         />
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>アイコン</Label>
+                    <div className="grid grid-cols-8 gap-2">
+                      {AVAILABLE_ICONS.map((icon) => (
+                        <button
+                          key={icon}
+                          type="button"
+                          className={`w-8 h-8 rounded border-2 flex items-center justify-center text-lg hover:bg-gray-50 ${
+                            selectedIcon === icon ? 'border-gray-400 bg-gray-100' : 'border-gray-200'
+                          }`}
+                          onClick={() => setSelectedIcon(icon)}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      選択中: <span className="text-lg">{selectedIcon}</span>
                     </div>
                   </div>
 
