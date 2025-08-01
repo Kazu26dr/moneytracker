@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +9,65 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { User, Bell, Shield, Download, Trash2 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { getCurrentUser } from '@/lib/supabase';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export default function SettingsPage() {
+  const [userProfile, setUserProfile] = useState({
+    name: '',
+    email: ''
+  });
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const { user } = await getCurrentUser();
+        if (user) {
+          setUserProfile({
+            name: user.user_metadata?.full_name || '',
+            email: user.email || ''
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpdating(true);
+    
+    // TODO: プロフィール更新のロジックを実装
+    // 現在はSupabaseのauth.updateUser()を使用してメタデータを更新する必要があります
+    
+    setTimeout(() => {
+      setUpdating(false);
+      // 成功メッセージを表示（実装時にtoastなどを使用）
+    }, 1000);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <div className="lg:ml-64">
+          <main className="py-8 px-4 lg:px-8">
+            <div className="flex items-center justify-center min-h-[400px]">
+              <LoadingSpinner />
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -31,17 +89,34 @@ export default function SettingsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">お名前</Label>
-                    <Input id="name" defaultValue="田中太郎" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">メールアドレス</Label>
-                    <Input id="email" type="email" defaultValue="tanaka@example.com" />
-                  </div>
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-                    プロフィールを更新
-                  </Button>
+                  <form onSubmit={handleProfileUpdate} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">お名前</Label>
+                      <Input 
+                        id="name" 
+                        value={userProfile.name}
+                        onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="お名前を入力してください"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">メールアドレス</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={userProfile.email}
+                        onChange={(e) => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="メールアドレスを入力してください"
+                      />
+                    </div>
+                    <Button 
+                      type="submit"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
+                      disabled={updating}
+                    >
+                      {updating ? 'プロフィールを更新中...' : 'プロフィールを更新'}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
 
