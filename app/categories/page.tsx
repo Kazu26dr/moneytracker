@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,6 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { createCategory, getCategories } from '@/lib/database';
 import { getCurrentUser } from '@/lib/supabase';
 import { Category } from '@/types';
-import { useCache } from '@/hooks/use-cache';
 import { toast } from '@/hooks/use-toast';
 
 const DEFAULT_COLORS = [
@@ -79,7 +78,7 @@ export default function CategoriesPage() {
 
   const loadCategories = useCallback(async () => {
     if (!userId) return;
-    
+
     setCategoryLoading(true);
     try {
       const result = await getCategories(userId);
@@ -217,9 +216,8 @@ export default function CategoriesPage() {
                         <button
                           key={icon}
                           type="button"
-                          className={`w-8 h-8 rounded border-2 flex items-center justify-center text-lg hover:bg-gray-50 ${
-                            selectedIcon === icon ? 'border-gray-400 bg-gray-100' : 'border-gray-200'
-                          }`}
+                          className={`w-8 h-8 rounded border-2 flex items-center justify-center text-lg hover:bg-gray-50 ${selectedIcon === icon ? 'border-gray-400 bg-gray-100' : 'border-gray-200'
+                            }`}
                           onClick={() => setSelectedIcon(icon)}
                         >
                           {icon}
@@ -286,7 +284,6 @@ export default function CategoriesPage() {
                 </CardContent>
               </Card>
             </div>
-
 
           </div>
         </main>
