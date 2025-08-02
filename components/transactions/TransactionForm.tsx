@@ -19,6 +19,7 @@ import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Transaction, Category } from '@/types';
 import { createTransaction } from '@/lib/database';
+import { clearCacheByPattern } from '@/hooks/use-cache';
 
 const transactionSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -75,6 +76,10 @@ export function TransactionForm({ categories, userId, onSuccess }: TransactionFo
         console.error('Transaction creation error:', error);
         return;
       }
+
+      // キャッシュをクリアしてダッシュボードの更新を促す
+      clearCacheByPattern('transactions');
+      clearCacheByPattern('monthly_stats');
 
       reset();
       setSelectedDate(new Date());

@@ -72,8 +72,10 @@ export default function TransactionsPage() {
                 categories={categories}
                 userId={userId}
                 onSuccess={() => {
-                  // Redirect to dashboard or show success message
-                  window.location.href = '/dashboard';
+                  // ダッシュボードにリダイレクト（キャッシュクリア後）
+                  setTimeout(() => {
+                    window.location.href = '/dashboard';
+                  }, 100);
                 }}
               />
             </div>

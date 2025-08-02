@@ -9,9 +9,9 @@ import { getTransactions, getMonthlyStats, getAssets } from '@/lib/database';
 import { getCurrentUser } from '@/lib/supabase';
 import { Transaction } from '@/types';
 import { Asset } from '@/types';
+import { useCache } from '@/hooks/use-cache';
 
 export default function DashboardPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState({
     totalIncome: 0,
     totalExpenses: 0,
@@ -23,26 +23,54 @@ export default function DashboardPage() {
     income: number;
     expenses: number;
   }>>([]);
-  const [loading, setLoading] = useState(true);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [assetsTotal, setAssetsTotal] = useState(0);
+  const [userId, setUserId] = useState<string>('');
+  const [userLoading, setUserLoading] = useState(true);
 
+  // ユーザー情報の取得
   useEffect(() => {
-    const loadDashboardData = async () => {
+    const loadUser = async () => {
       try {
         const { user } = await getCurrentUser();
-        if (!user) return;
-
-        // Get recent transactions
-        const transactionsResult = await getTransactions(user.id, 10);
-        const transactionData = transactionsResult?.data;
-        if (transactionData) {
-          setTransactions(transactionData);
+        if (user) {
+          setUserId(user.id);
         }
+      } catch (error) {
+        console.error('Error loading user:', error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  // 取引データの取得（キャッシュ付き）
+  const {
+    data: transactionData,
+    loading: transactionLoading
+  } = useCache(
+    `transactions_${userId}_dashboard`,
+    async () => {
+      if (!userId) return { data: [], error: null };
+      return await getTransactions(userId, 10);
+    },
+    2 * 60 * 1000 // 2分間キャッシュ
+  );
+
+  const transactions = transactionData?.data || [];
+
+  // 統計データとその他のデータの取得
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!userId) return;
+
+      try {
 
         // Get current month stats
         const now = new Date();
-        const monthlyStatsResult = await getMonthlyStats(user.id, now.getFullYear(), now.getMonth() + 1);
+        const monthlyStatsResult = await getMonthlyStats(userId, now.getFullYear(), now.getMonth() + 1);
         const monthlyData = monthlyStatsResult?.data;
 
         if (monthlyData) {
@@ -73,7 +101,7 @@ export default function DashboardPage() {
         ]);
 
         // 資産データ取得
-        const assetsResult = await getAssets(user.id);
+        const assetsResult = await getAssets(userId);
         if (assetsResult?.data) {
           setAssets(assetsResult.data);
           setAssetsTotal(assetsResult.data.reduce((sum: number, a: Asset) => sum + (a.balance || 0), 0));
@@ -81,13 +109,13 @@ export default function DashboardPage() {
 
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
     loadDashboardData();
-  }, []);
+  }, [userId]);
+
+  const loading = userLoading || transactionLoading;
 
   if (loading) {
     return (
