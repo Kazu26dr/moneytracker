@@ -14,6 +14,28 @@ interface TransactionListProps {
     pageSize?: number;
 }
 
+// トランザクションデータが有効かどうかをチェックする型ガード
+function isValidTransaction(item: unknown): item is Transaction {
+    return Boolean(
+        item &&
+        typeof item === 'object' &&
+        item !== null &&
+        !(item as any).error && // ParserErrorをチェック
+        typeof (item as any).id === 'string' &&
+        typeof (item as any).user_id === 'string' &&
+        typeof (item as any).amount === 'number' &&
+        ((item as any).type === 'income' || (item as any).type === 'expense') &&
+        typeof (item as any).description === 'string' &&
+        typeof (item as any).date === 'string' &&
+        // categoriesはオプショナルなのでundefinedまたは有効なオブジェクトかチェック
+        ((item as any).categories === null || (item as any).categories === undefined ||
+            (typeof (item as any).categories === 'object' &&
+                typeof (item as any).categories.id === 'string' &&
+                typeof (item as any).categories.name === 'string' &&
+                typeof (item as any).categories.color === 'string'))
+    );
+}
+
 export function TransactionList({ userId, pageSize = 20 }: TransactionListProps) {
     const [currentPage, setCurrentPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -35,12 +57,33 @@ export function TransactionList({ userId, pageSize = 20 }: TransactionListProps)
         5 * 60 * 1000 // 5分間キャッシュ
     );
 
-    const transactions = transactionData?.data || [];
+    // データを安全にフィルタリング
+    const rawData = transactionData?.data || [];
+    console.log('Raw transaction data:', rawData); // デバッグ用
+
+    // unknownを経由してより安全な型変換を行う
+    const transactions: Transaction[] = (rawData as unknown[]).filter(isValidTransaction);
+
+    // フィルタリング後のデータ数をログ出力
+    if (rawData.length !== transactions.length) {
+        console.warn(`Filtered out ${rawData.length - transactions.length} invalid transactions`);
+        console.warn('Invalid items:', rawData.filter(item => !isValidTransaction(item as unknown)));
+    }
 
     useEffect(() => {
         // データがページサイズより少ない場合、次のページがない
         setHasMore(transactions.length === pageSize);
     }, [transactions.length, pageSize]);
+
+    // データにパースエラーが含まれている場合の処理
+    useEffect(() => {
+        if (transactionData?.data) {
+            const hasErrors = transactionData.data.some((item: any) => item?.error);
+            if (hasErrors) {
+                console.error('Transaction data contains parse errors:', transactionData.data);
+            }
+        }
+    }, [transactionData]);
 
     const handleNextPage = () => {
         setCurrentPage(prev => prev + 1);
@@ -64,11 +107,16 @@ export function TransactionList({ userId, pageSize = 20 }: TransactionListProps)
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('ja-JP', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        try {
+            return new Date(dateString).toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Date formatting error:', error);
+            return dateString; // フォーマットに失敗した場合は元の文字列を返す
+        }
     };
 
     if (loading) {
@@ -92,8 +140,48 @@ export function TransactionList({ userId, pageSize = 20 }: TransactionListProps)
         );
     }
 
+    // データベースからのデータにパースエラーが含まれている場合の警告表示
+    const hasParseErrors = transactionData?.data &&
+        transactionData.data.some((item: unknown) => (item as any)?.error);
+
+    // 全てのデータがパースエラーの場合は、より明確なエラーメッセージを表示
+    const allAreErrors = rawData.length > 0 && rawData.every((item: unknown) => (item as any)?.error);
+
+    if (allAreErrors) {
+        return (
+            <Card>
+                <CardContent className="p-6">
+                    <p className="text-red-600">
+                        データベースクエリにエラーがあります。SQLクエリを確認してください。
+                    </p>
+                    <details className="mt-2">
+                        <summary className="cursor-pointer text-sm text-gray-600">
+                            エラーの詳細を表示
+                        </summary>
+                        <pre className="mt-2 p-2 bg-gray-100 text-xs overflow-auto">
+                            {JSON.stringify(rawData, null, 2)}
+                        </pre>
+                    </details>
+                    <Button onClick={() => refetch()} className="mt-2">
+                        再試行
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <div className="space-y-4">
+            {hasParseErrors && (
+                <Card className="border-yellow-200 bg-yellow-50">
+                    <CardContent className="p-4">
+                        <p className="text-yellow-800 text-sm">
+                            ⚠️ 一部のデータの読み込みに問題があります。データベースの構造を確認してください。
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+
             <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">最近の取引</h2>
                 <div className="flex gap-2">
@@ -135,8 +223,8 @@ export function TransactionList({ userId, pageSize = 20 }: TransactionListProps)
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-3">
                                         <div className={`p-2 rounded-full ${transaction.type === 'income'
-                                                ? 'bg-green-100 text-green-600'
-                                                : 'bg-red-100 text-red-600'
+                                            ? 'bg-green-100 text-green-600'
+                                            : 'bg-red-100 text-red-600'
                                             }`}>
                                             {transaction.type === 'income' ? (
                                                 <Plus className="h-4 w-4" />
@@ -174,4 +262,4 @@ export function TransactionList({ userId, pageSize = 20 }: TransactionListProps)
             )}
         </div>
     );
-} 
+}

@@ -11,6 +11,28 @@ import { Transaction } from '@/types';
 import { Asset } from '@/types';
 import { useCache } from '@/hooks/use-cache';
 
+// トランザクションデータが有効かどうかをチェックする型ガード
+function isValidTransaction(item: unknown): item is Transaction {
+  return Boolean(
+    item &&
+    typeof item === 'object' &&
+    item !== null &&
+    !(item as any).error && // ParserErrorをチェック
+    typeof (item as any).id === 'string' &&
+    typeof (item as any).user_id === 'string' &&
+    typeof (item as any).amount === 'number' &&
+    ((item as any).type === 'income' || (item as any).type === 'expense') &&
+    typeof (item as any).description === 'string' &&
+    typeof (item as any).date === 'string' &&
+    // categoriesはオプショナルなのでundefinedまたは有効なオブジェクトかチェック
+    ((item as any).categories === null || (item as any).categories === undefined ||
+      (typeof (item as any).categories === 'object' &&
+        typeof (item as any).categories.id === 'string' &&
+        typeof (item as any).categories.name === 'string' &&
+        typeof (item as any).categories.color === 'string'))
+  );
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState({
     totalIncome: 0,
@@ -59,7 +81,17 @@ export default function DashboardPage() {
     2 * 60 * 1000 // 2分間キャッシュ
   );
 
-  const transactions = transactionData?.data || [];
+  // データを安全にフィルタリング
+  const rawTransactions = transactionData?.data || [];
+  const transactions: Transaction[] = (rawTransactions as unknown[]).filter(isValidTransaction);
+
+  // データにパースエラーが含まれている場合のログ出力
+  useEffect(() => {
+    if (rawTransactions.length > 0 && transactions.length !== rawTransactions.length) {
+      console.warn(`Dashboard: Filtered out ${rawTransactions.length - transactions.length} invalid transactions`);
+      console.warn('Invalid transactions:', rawTransactions.filter(item => !isValidTransaction(item as unknown)));
+    }
+  }, [rawTransactions, transactions]);
 
   // 統計データとその他のデータの取得
   useEffect(() => {
