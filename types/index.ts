@@ -1,4 +1,5 @@
 export interface Transaction {
+  categories: any;
   id: string;
   user_id: string;
   amount: number;
@@ -80,3 +81,7 @@ export interface Asset {
   created_at: string;
   updated_at: string;
 }
+
+export type NewTransaction = Omit<Transaction, "id" | "created_at" | "updated_at" | "categories"> & {
+  category_id: string;
+};

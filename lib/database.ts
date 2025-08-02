@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { Transaction, Category, Budget, Asset } from "@/types";
+import { Transaction, Category, Budget, Asset, NewTransaction } from "@/types";
 import { monitorDatabaseQuery, checkPerformanceWarning } from "./performance";
 
 // Transaction operations
@@ -70,15 +70,18 @@ export const getTransactions = monitorDatabaseQuery(
   }
 );
 
+// トランザクション作成
 export const createTransaction = async (
-  transaction: Omit<Transaction, "id" | "created_at" | "updated_at">
+  transaction: NewTransaction
 ) => {
   if (!supabase) return;
+
   const { data, error } = await supabase
     .from("transactions")
     .insert([transaction])
     .select()
     .single();
+
   return { data, error };
 };
 

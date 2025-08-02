@@ -71,7 +71,8 @@ export default function DashboardPage() {
   // 取引データの取得（キャッシュ付き）
   const {
     data: transactionData,
-    loading: transactionLoading
+    loading: transactionLoading,
+    refetch: refetchTransactions
   } = useCache(
     `transactions_${userId}_dashboard`,
     async () => {
@@ -80,6 +81,21 @@ export default function DashboardPage() {
     },
     2 * 60 * 1000 // 2分間キャッシュ
   );
+
+  // 新しい取引が追加された時にキャッシュを更新
+  useEffect(() => {
+    // カスタムイベントリスナーを追加
+    const handleNewTransaction = () => {
+      refetchTransactions();
+    };
+
+    window.addEventListener('newTransaction', handleNewTransaction);
+    
+    // クリーンアップ関数
+    return () => {
+      window.removeEventListener('newTransaction', handleNewTransaction);
+    };
+  }, [refetchTransactions]);
 
   // データを安全にフィルタリング
   const rawTransactions = transactionData?.data || [];

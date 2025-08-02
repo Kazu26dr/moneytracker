@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,7 +17,7 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Transaction, Category } from '@/types';
+import { Transaction, Category, NewTransaction } from '@/types';
 import { createTransaction } from '@/lib/database';
 import { clearCacheByPattern } from '@/hooks/use-cache';
 
@@ -59,10 +59,15 @@ export function TransactionForm({ categories, userId, onSuccess }: TransactionFo
   const transactionType = watch('type');
   const filteredCategories = categories.filter(cat => cat.type === transactionType);
 
+  // 取引タイプ変更時にカテゴリ選択をリセット
+  useEffect(() => {
+    setValue('category_id', '');
+  }, [transactionType, setValue]);
+
   const onSubmit = async (data: TransactionFormData) => {
     setIsLoading(true);
     try {
-      const transactionData = {
+      const transactionData: NewTransaction = {
         ...data,
         user_id: userId,
         date: data.date.toISOString(),
@@ -80,6 +85,9 @@ export function TransactionForm({ categories, userId, onSuccess }: TransactionFo
       // キャッシュをクリアしてダッシュボードの更新を促す
       clearCacheByPattern('transactions');
       clearCacheByPattern('monthly_stats');
+
+      // カスタムイベントを発火
+      window.dispatchEvent(new CustomEvent('newTransaction'));
 
       reset();
       setSelectedDate(new Date());
