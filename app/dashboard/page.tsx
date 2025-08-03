@@ -115,9 +115,18 @@ export default function DashboardPage() {
       if (!userId) return;
 
       try {
+        const now = new Date();
+
+        // 資産データ取得（先に取得）
+        const assetsResult = await getAssets(userId);
+        let assetsTotalForChart = 0;
+        if (assetsResult?.data) {
+          setAssets(assetsResult.data);
+          assetsTotalForChart = assetsResult.data.reduce((sum: number, a: Asset) => sum + (a.balance || 0), 0);
+          setAssetsTotal(assetsTotalForChart);
+        }
 
         // Get current month stats
-        const now = new Date();
         const monthlyStatsResult = await getMonthlyStats(userId, now.getFullYear(), now.getMonth() + 1);
         const monthlyData = monthlyStatsResult?.data;
 
@@ -138,22 +147,33 @@ export default function DashboardPage() {
           });
         }
 
-        // Mock chart data (in real app, this would come from database)
-        setChartData([
-          { month: '1月', income: 300000, expenses: 250000 },
-          { month: '2月', income: 320000, expenses: 280000 },
-          { month: '3月', income: 350000, expenses: 300000 },
-          { month: '4月', income: 340000, expenses: 290000 },
-          { month: '5月', income: 360000, expenses: 310000 },
-          { month: '6月', income: 380000, expenses: 320000 },
-        ]);
-
-        // 資産データ取得
-        const assetsResult = await getAssets(userId);
-        if (assetsResult?.data) {
-          setAssets(assetsResult.data);
-          setAssetsTotal(assetsResult.data.reduce((sum: number, a: Asset) => sum + (a.balance || 0), 0));
+        // 総資産推移グラフ用データ（直近6ヶ月分のDBデータで集計）
+        const months = [];
+        for (let i = 0; i < 6; i++) {
+          const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          months.push({
+            year: date.getFullYear(),
+            month: date.getMonth() + 1,
+            label: `${date.getMonth() + 1}月`
+          });
         }
+        // 月ごとに収入・支出を取得
+        const monthlyStatsResults = await Promise.all(
+          months.map(m => getMonthlyStats(userId, m.year, m.month))
+        );
+        // グラフ用データ生成
+        const chartDataArr = months.map((m, idx) => {
+          const stats = monthlyStatsResults[idx]?.data || [];
+          const income = stats.filter((t: any) => t.type === 'income').reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
+          const expenses = stats.filter((t: any) => t.type === 'expense').reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
+          return {
+            month: m.label,
+            income,
+            expenses,
+            assetsTotal: assetsTotalForChart // 資産履歴があれば月ごとに出す
+          };
+        });
+        setChartData(chartDataArr.reverse()); // 古い順→新しい順
 
       } catch (error) {
         console.error('Error loading dashboard data:', error);
