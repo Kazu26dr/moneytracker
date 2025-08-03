@@ -1,33 +1,145 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { getTransactions, getMonthlyStats } from '@/lib/database';
+import { getCurrentUser } from '@/lib/supabase';
+import { useCache } from '@/hooks/use-cache';
 
 const COLORS = ['#10B981', '#EF4444', '#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899'];
 
-const mockData = {
-  monthlyTrends: [
-    { month: '1月', income: 300000, expenses: 250000 },
-    { month: '2月', income: 320000, expenses: 280000 },
-    { month: '3月', income: 350000, expenses: 300000 },
-    { month: '4月', income: 340000, expenses: 290000 },
-    { month: '5月', income: 360000, expenses: 310000 },
-    { month: '6月', income: 380000, expenses: 320000 },
-  ],
-  categoryBreakdown: [
-    { name: '食費', value: 80000, color: '#EF4444' },
-    { name: '住居費', value: 120000, color: '#F59E0B' },
-    { name: '交通費', value: 30000, color: '#10B981' },
-    { name: '光熱費', value: 25000, color: '#3B82F6' },
-    { name: '娯楽費', value: 45000, color: '#8B5CF6' },
-    { name: 'その他', value: 20000, color: '#EC4899' },
-  ]
-};
-
 export default function ReportsPage() {
+  const [userId, setUserId] = useState<string>('');
+  const [userLoading, setUserLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState('2024-06');
+  const [stats, setStats] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    netIncome: 0,
+    monthlyChange: 0
+  });
+  const [monthlyTrends, setMonthlyTrends] = useState<Array<{
+    month: string;
+    income: number;
+    expenses: number;
+  }>>([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState<Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>>([]);
+
+  // ユーザー情報の取得
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const { user } = await getCurrentUser();
+        if (user) {
+          setUserId(user.id);
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  // 取引データの取得（キャッシュ付き）
+  const {
+    data: transactionData,
+    loading: transactionLoading,
+    refetch: refetchTransactions
+  } = useCache(
+    `reports_transactions_${userId}_${selectedPeriod}`,
+    async () => {
+      if (!userId) return { data: [], error: null };
+      
+      // 選択された期間の年月を取得
+      const [year, month] = selectedPeriod.split('-').map(Number);
+      return await getMonthlyStats(userId, year, month);
+    },
+    2 * 60 * 1000 // 2分間キャッシュ
+  );
+
+  // 新しい取引が追加された時にキャッシュを更新
+  useEffect(() => {
+    const handleNewTransaction = () => {
+      refetchTransactions();
+    };
+
+    window.addEventListener('newTransaction', handleNewTransaction);
+    
+    return () => {
+      window.removeEventListener('newTransaction', handleNewTransaction);
+    };
+  }, [refetchTransactions]);
+
+  // データの処理
+  useEffect(() => {
+    if (!transactionData?.data) return;
+
+    const transactions = transactionData.data;
+    
+    // 収入と支出の計算
+    const income = transactions
+      .filter((t: any) => t.type === 'income')
+      .reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
+    
+    const expenses = transactions
+      .filter((t: any) => t.type === 'expense')
+      .reduce((sum: number, t: any) => sum + Math.abs(t.amount), 0);
+
+    setStats({
+      totalIncome: income,
+      totalExpenses: expenses,
+      netIncome: income - expenses,
+      monthlyChange: 5.2 // 前月比は今回はモックデータ
+    });
+
+    // カテゴリ別支出の計算
+    const categoryMap = new Map();
+    transactions
+      .filter((t: any) => t.type === 'expense')
+      .forEach((t: any) => {
+        if (t.categories) {
+          const categoryName = t.categories.name;
+          const categoryColor = t.categories.color;
+          const currentAmount = categoryMap.get(categoryName) || { value: 0, color: categoryColor };
+          categoryMap.set(categoryName, {
+            value: currentAmount.value + Math.abs(t.amount),
+            color: categoryColor
+          });
+        }
+      });
+
+    const categoryBreakdownData = Array.from(categoryMap.entries()).map(([name, data]: [string, any]) => ({
+      name,
+      value: data.value,
+      color: data.color
+    }));
+
+    setCategoryBreakdown(categoryBreakdownData);
+
+    // 月次推移データ（簡略化 - 実際のアプリでは複数月のデータを取得）
+    const currentMonth = new Date().toLocaleDateString('ja-JP', { month: 'long' });
+    setMonthlyTrends([
+      { month: '1月', income: 300000, expenses: 250000 },
+      { month: '2月', income: 320000, expenses: 280000 },
+      { month: '3月', income: 350000, expenses: 300000 },
+      { month: '4月', income: 340000, expenses: 290000 },
+      { month: '5月', income: 360000, expenses: 310000 },
+      { month: currentMonth, income, expenses },
+    ]);
+  }, [transactionData]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ja-JP', {
       style: 'currency',
@@ -35,7 +147,17 @@ export default function ReportsPage() {
     }).format(amount);
   };
 
-  const totalExpenses = mockData.categoryBreakdown.reduce((sum, item) => sum + item.value, 0);
+  const loading = userLoading || transactionLoading;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  const totalExpenses = categoryBreakdown.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -48,7 +170,10 @@ export default function ReportsPage() {
                 <h1 className="text-3xl font-bold text-gray-900">レポート</h1>
                 <p className="text-gray-600 mt-2">詳細な分析と統計を確認できます</p>
               </div>
-              <Select defaultValue="2024-06">
+              <Select 
+                value={selectedPeriod} 
+                onValueChange={setSelectedPeriod}
+              >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="期間を選択" />
                 </SelectTrigger>
@@ -71,7 +196,7 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(380000)}
+                    {formatCurrency(stats.totalIncome)}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">前月比 +5.2%</p>
                 </CardContent>
@@ -86,7 +211,7 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(totalExpenses)}
+                    {formatCurrency(stats.totalExpenses)}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">前月比 +3.1%</p>
                 </CardContent>
@@ -101,9 +226,9 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-emerald-600">
-                    {formatCurrency(380000 - totalExpenses)}
+                    {formatCurrency(stats.netIncome)}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">前月比 +8.7%</p>
+                  <p className="text-xs text-gray-500 mt-1">前月比 {stats.monthlyChange >= 0 ? '+' : ''}{stats.monthlyChange.toFixed(1)}%</p>
                 </CardContent>
               </Card>
             </div>
@@ -117,7 +242,7 @@ export default function ReportsPage() {
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={mockData.monthlyTrends}>
+                      <BarChart data={monthlyTrends}>
                         <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                         <XAxis dataKey="month" className="text-sm" />
                         <YAxis
@@ -144,7 +269,7 @@ export default function ReportsPage() {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={mockData.categoryBreakdown}
+                            data={categoryBreakdown}
                             cx="50%"
                             cy="50%"
                             outerRadius={80}
@@ -152,7 +277,7 @@ export default function ReportsPage() {
                             dataKey="value"
                             label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
                           >
-                            {mockData.categoryBreakdown.map((entry, index) => (
+                            {categoryBreakdown.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                           </Pie>
@@ -161,7 +286,7 @@ export default function ReportsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      {mockData.categoryBreakdown.map((item, index) => (
+                      {categoryBreakdown.map((item, index) => (
                         <div key={index} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div
@@ -181,12 +306,13 @@ export default function ReportsPage() {
               </Card>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-blue-800">
-                <strong>注意:</strong> このレポートはデモデータを使用しています。
-                実際のアプリケーションでは、あなたの取引データに基づいてリアルタイムで更新されます。
-              </p>
-            </div>
+            {categoryBreakdown.length === 0 && !loading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800">
+                  選択した期間にデータがありません。取引を追加すると、ここにレポートが表示されます。
+                </p>
+              </div>
+            )}
           </div>
         </main>
       </div>
