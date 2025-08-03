@@ -14,9 +14,25 @@ import { useCache } from '@/hooks/use-cache';
 const COLORS = ['#10B981', '#EF4444', '#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899'];
 
 export default function ReportsPage() {
+  // 直近3ヶ月分の期間リストを生成
+  const getRecentPeriods = () => {
+    const now = new Date();
+    const periods = [];
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = `${date.getFullYear()}年${date.getMonth() + 1}月`;
+      periods.push({ value, label });
+    }
+    return periods;
+  };
+  const recentPeriods = getRecentPeriods();
   const [userId, setUserId] = useState<string>('');
   const [userLoading, setUserLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('2024-06');
+  const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [stats, setStats] = useState({
     totalIncome: 0,
     totalExpenses: 0,
@@ -128,16 +144,22 @@ export default function ReportsPage() {
 
     setCategoryBreakdown(categoryBreakdownData);
 
-    // 月次推移データ（簡略化 - 実際のアプリでは複数月のデータを取得）
-    const currentMonth = new Date().toLocaleDateString('ja-JP', { month: 'long' });
-    setMonthlyTrends([
-      { month: '1月', income: 300000, expenses: 250000 },
-      { month: '2月', income: 320000, expenses: 280000 },
-      { month: '3月', income: 350000, expenses: 300000 },
-      { month: '4月', income: 340000, expenses: 290000 },
-      { month: '5月', income: 360000, expenses: 310000 },
-      { month: currentMonth, income, expenses },
-    ]);
+    // 月次推移データ（今月から直近6ヶ月分を動的生成）
+    const getRecentMonthsData = (income: number, expenses: number) => {
+      const now = new Date();
+      const months = [];
+      for (let i = 0; i < 6; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthLabel = `${date.getMonth() + 1}月`;
+        months.push({
+          month: monthLabel,
+          income: i === 0 ? income : 300000 + i * 20000,
+          expenses: i === 0 ? expenses : 250000 + i * 20000,
+        });
+      }
+      return months.reverse(); // 古い順→新しい順
+    };
+    setMonthlyTrends(getRecentMonthsData(income, expenses));
   }, [transactionData]);
 
   const formatCurrency = (amount: number) => {
@@ -178,9 +200,11 @@ export default function ReportsPage() {
                   <SelectValue placeholder="期間を選択" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2024-06">2024年6月</SelectItem>
-                  <SelectItem value="2024-05">2024年5月</SelectItem>
-                  <SelectItem value="2024-04">2024年4月</SelectItem>
+                  {recentPeriods.map(period => (
+                    <SelectItem key={period.value} value={period.value}>
+                      {period.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
