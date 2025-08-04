@@ -2,19 +2,23 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
-import React, { useState } from 'react';
-
+import React, { useEffect, useState } from 'react';
+import { getAssets } from '@/lib/database';
+import { getCurrentUser } from '@/lib/supabase';
+import { Asset } from '@/types';
 interface ExpenseChartProps {
   data: Array<{
     month: string;
     income: number;
     expenses: number;
   }>;
-  initialAsset?: number; // 追加
+  initialAsset?: number;
 }
 
 export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
   const [period, setPeriod] = useState<'6m' | '12m'>('6m');
+  const [userId, setUserId] = useState<string>('');
+  const [assetsTotal, setAssetsTotal] = useState(0);
 
   // 現在月（日本語表記: "7月" など）
   const now = new Date();
@@ -41,14 +45,49 @@ export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
     return { ...item, asset: total };
   });
 
+    // ユーザー情報の取得
+    useEffect(() => {
+      const loadUser = async () => {
+        try {
+          const { user } = await getCurrentUser();
+          if (user) {
+            setUserId(user.id);
+          }
+        } catch (error) {
+          console.error('Error loading user:', error);
+        }
+      };
+  
+      loadUser();
+    }, []);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        // 資産データ取得（先に取得）
+        const assetsResult = await getAssets(userId);
+        let assetsTotalForChart = 0;
+        if (assetsResult?.data) {
+
+          assetsTotalForChart = assetsResult.data.reduce((sum: number, a: Asset) => sum + (a.balance || 0), 0);
+          setAssetsTotal(assetsTotalForChart);
+        }
+      } catch (error) {
+        console.error('Error fetching assets:', error);
+      }
+    };
+
+    loadDashboardData();
+  }, [userId]);
+
   // カスタムツールチップ
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const d = payload.find((p: any) => p.dataKey === 'asset')?.payload;
+      const d = payload[0]?.payload;
       return (
         <div className="bg-white p-3 rounded shadow text-xs border border-gray-200">
           <div><span className="font-semibold">{label}</span></div>
-          <div>総資産: <span className="font-bold text-blue-600">¥{d.asset.toLocaleString()}</span></div>
+          <div>総資産: <span className="font-bold text-blue-600">¥{assetsTotal.toLocaleString()}</span></div>
           <div>収入: <span className="text-green-600">¥{d.income.toLocaleString()}</span></div>
           <div>支出: <span className="text-red-600">¥{d.expenses.toLocaleString()}</span></div>
         </div>
