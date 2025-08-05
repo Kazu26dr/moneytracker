@@ -31,7 +31,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
         <CardTitle className="text-lg font-semibold">最近の取引</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-96 overflow-y-auto">
           {transactions.length === 0 ? (
             <p className="text-gray-500 text-center py-8">取引がありません</p>
           ) : (
