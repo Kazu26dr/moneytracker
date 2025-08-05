@@ -204,7 +204,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-bold mb-2">資産合計</h2>
           <div className="text-3xl font-bold text-emerald-600 mb-2">{assetsTotal.toLocaleString()} 円</div>
-          <ul className="divide-y divide-gray-200">
+          <ul className="divide-y divide-gray-200 max-h-32 overflow-y-auto">
             {assets.map((asset) => (
               <li key={asset.id} className="py-2 flex justify-between items-center">
                 <span className="font-medium">{asset.name} <span className="text-xs text-gray-500 ml-2">({asset.type})</span></span>
