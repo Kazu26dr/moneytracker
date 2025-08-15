@@ -38,11 +38,9 @@ export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
 
   const displayData = period === '6m' ? getRecentMonthsData(6) : getRecentMonthsData(12);
 
-  // 総資産の累積計算
-  let total = initialAsset;
+  // 総資産は現在の資産残高を各月に表示
   const assetData = displayData.map((item) => {
-    total += item.income - item.expenses;
-    return { ...item, asset: total };
+    return { ...item, asset: assetsTotal };
   });
 
     // ユーザー情報の取得
