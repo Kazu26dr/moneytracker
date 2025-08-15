@@ -118,7 +118,7 @@ export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
       <CardContent>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={assetData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <AreaChart data={assetData} margin={{ top: 10, right: 30, left: 60, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
               <XAxis
                 dataKey="month"
@@ -130,7 +130,8 @@ export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
                 axisLine={false}
                 tickLine={false}
                 className="text-sm text-gray-500"
-                tickFormatter={(value) => `¥${value.toLocaleString()}`}
+                tickFormatter={(value) => `¥${(value / 10000).toFixed(0)}万`}
+                width={50}
               />
               <Tooltip content={<CustomTooltip />} />
               {/* 総資産の推移（折れ線） */}
