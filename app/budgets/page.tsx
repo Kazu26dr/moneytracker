@@ -142,7 +142,7 @@ export default function BudgetsPage() {
         <Sidebar />
         <div className="lg:ml-64">
           <main className="py-8 px-4 lg:px-8">
-            <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center justify-center min-h-[60vh]">
               <LoadingSpinner />
             </div>
           </main>

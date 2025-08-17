@@ -173,8 +173,15 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner />
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <div className="lg:ml-64">
+          <main className="py-8 px-4 lg:px-8">
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <LoadingSpinner />
+            </div>
+          </main>
+        </div>
       </div>
     );
   }
