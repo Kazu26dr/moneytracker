@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Target, AlertTriangle } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { getBudgets, createBudget, getCategories } from '@/lib/database';
+import { getMonthlyStats } from '@/lib/database';
 import { getCurrentUser } from '@/lib/supabase';
 import { Budget, Category } from '@/types';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -19,6 +20,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [spentAmounts, setSpentAmounts] = useState<{[categoryId: string]: number}>({});
   const [userId, setUserId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -46,6 +48,9 @@ export default function BudgetsPage() {
         
         setBudgets(budgetsResult?.data || []);
         setCategories(categoriesResult?.data || []);
+        
+        // 今月の支出データを取得して使用済み金額を計算
+        await calculateSpentAmounts(user.id, budgetsResult?.data || []);
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -55,6 +60,47 @@ export default function BudgetsPage() {
 
     loadData();
   }, []);
+
+  // 各カテゴリの使用済み金額を計算
+  const calculateSpentAmounts = async (userId: string, budgetList: any[]) => {
+    try {
+      const now = new Date();
+      const monthlyStatsResult = await getMonthlyStats(userId, now.getFullYear(), now.getMonth() + 1);
+      
+      if (monthlyStatsResult?.data) {
+        const spentByCategory: {[categoryId: string]: number} = {};
+        
+        // 支出取引をカテゴリ別に集計
+        monthlyStatsResult.data
+          .filter((transaction: any) => transaction.type === 'expense')
+          .forEach((transaction: any) => {
+            const categoryId = transaction.category_id;
+            if (categoryId) {
+              spentByCategory[categoryId] = (spentByCategory[categoryId] || 0) + Math.abs(transaction.amount);
+            }
+          });
+        
+        setSpentAmounts(spentByCategory);
+      }
+    } catch (error) {
+      console.error('Error calculating spent amounts:', error);
+    }
+  };
+
+  // 新しい取引が追加された時にデータを更新
+  useEffect(() => {
+    const handleNewTransaction = async () => {
+      if (userId && budgets.length > 0) {
+        await calculateSpentAmounts(userId, budgets);
+      }
+    };
+
+    window.addEventListener('newTransaction', handleNewTransaction);
+    
+    return () => {
+      window.removeEventListener('newTransaction', handleNewTransaction);
+    };
+  }, [userId, budgets]);
 
   const handleFormChange = (field: string, value: string) => {
     setBudgetForm(prev => ({ ...prev, [field]: value }));
@@ -90,6 +136,9 @@ export default function BudgetsPage() {
       const budgetsResult = await getBudgets(userId);
       setBudgets(budgetsResult?.data || []);
       
+      // 使用済み金額も再計算
+      await calculateSpentAmounts(userId, budgetsResult?.data || []);
+      
       // フォームをリセットしてダイアログを閉じる
       setBudgetForm({ category_id: '', amount: '', period: 'monthly' });
       setIsDialogOpen(false);
@@ -124,17 +173,20 @@ export default function BudgetsPage() {
   };
 
   // モックデータを実際のデータに置き換える準備（今回は基本構造のみ）
-  const mockBudgets = budgets.length > 0 ? budgets.map(budget => ({
+  const budgetData = budgets.length > 0 ? budgets.map(budget => {
+    const spentAmount = spentAmounts[budget.category_id] || 0;
+    return {
     id: budget.id,
     category: budget.categories?.name || 'カテゴリ不明',
     budgetAmount: budget.amount,
-    spentAmount: 0, // TODO: 実際の支出額を計算
+    spentAmount: spentAmount,
     color: budget.categories?.color || '#6B7280',
     period: budget.period
-  })) : [];
+    };
+  }) : [];
 
-  const totalBudget = mockBudgets.reduce((sum, budget) => sum + budget.budgetAmount, 0);
-  const totalSpent = mockBudgets.reduce((sum, budget) => sum + budget.spentAmount, 0);
+  const totalBudget = budgetData.reduce((sum, budget) => sum + budget.budgetAmount, 0);
+  const totalSpent = budgetData.reduce((sum, budget) => sum + budget.spentAmount, 0);
 
   if (loading) {
     return (
@@ -298,7 +350,7 @@ export default function BudgetsPage() {
 
             {/* Budget Categories */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {mockBudgets.map((budget) => {
+              {budgetData.map((budget) => {
                 const progressPercentage = getProgressPercentage(budget.spentAmount, budget.budgetAmount);
                 const status = getBudgetStatus(budget.spentAmount, budget.budgetAmount);
 
@@ -366,7 +418,7 @@ export default function BudgetsPage() {
               })}
             </div>
 
-            {mockBudgets.length === 0 && (
+            {budgetData.length === 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-blue-800">
                   予算が設定されていません。「予算を追加」ボタンから新しい予算を設定してください。
