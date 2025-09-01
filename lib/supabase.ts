@@ -55,3 +55,23 @@ export const getCurrentUser = async () => {
   const { data, error } = await supabase.auth.getUser();
   return { user: data.user, error };
 };
+
+export const resetPassword = async (email: string) => {
+  if (!supabase) {
+    return { error: { message: "Supabase client not initialized" } };
+  }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  return { error };
+};
+
+export const updatePassword = async (newPassword: string) => {
+  if (!supabase) {
+    return { error: { message: "Supabase client not initialized" } };
+  }
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword
+  });
+  return { error };
+};
