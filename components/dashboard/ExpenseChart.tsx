@@ -39,16 +39,18 @@ export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
   const displayData = period === '6m' ? getRecentMonthsData(6) : getRecentMonthsData(12);
 
   // 総資産は現在の資産残高を各月に表示
-  const assetData = displayData.map((item) => {
-    return { ...item, asset: assetsTotal };
-  });
-
+  const assetData = displayData.map((item) => ({
+    ...item,
+    asset: assetsTotal
+          const monthsToShow = period === '6m' ? 6 : 12;
+          const months = [];
+          for (let i = 0; i < monthsToShow; i++) {
     // ユーザー情報の取得
     useEffect(() => {
       const loadUser = async () => {
         try {
-          const { user } = await getCurrentUser();
-          if (user) {
+              income: i === 0 ? income : Math.max(0, 300000 + (Math.random() - 0.5) * 100000),
+              expenses: i === 0 ? expenses : Math.max(0, 250000 + (Math.random() - 0.5) * 80000),
             setUserId(user.id);
           }
         } catch (error) {
@@ -61,6 +63,8 @@ export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
 
   useEffect(() => {
     const loadDashboardData = async () => {
+      if (!userId) return;
+      
       try {
         // 資産データ取得（先に取得）
         const assetsResult = await getAssets(userId);
@@ -75,8 +79,10 @@ export function ExpenseChart({ data, initialAsset = 0 }: ExpenseChartProps) {
       }
     };
 
-    loadDashboardData();
-  }, [userId]);
+    if (userId) {
+      loadDashboardData();
+    }
+  }, [userId, period]);
 
   // カスタムツールチップ
   const CustomTooltip = ({ active, payload, label }: any) => {

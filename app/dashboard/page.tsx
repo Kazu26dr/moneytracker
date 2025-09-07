@@ -170,7 +170,6 @@ export default function DashboardPage() {
             month: m.label,
             income,
             expenses,
-            assetsTotal: assetsTotalForChart // 資産履歴があれば月ごとに出す
           };
         });
         setChartData(chartDataArr.reverse()); // 古い順→新しい順
